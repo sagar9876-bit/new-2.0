@@ -40,15 +40,69 @@ class ServerSettings(BaseSettings):
         return v
 
 class SecuritySettings(BaseSettings):
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-here")
+    SECRET_KEY: str = os.getenv("SECRET_KEY")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    MAX_REQUEST_SIZE: int = 1048576  # 1MB
+    MAX_CONNECTIONS_PER_IP: int = 100
+    MAX_CONNECTIONS_PER_USER: int = 5
+    RATE_LIMIT_WINDOW: int = 60  # seconds
+    RATE_LIMIT_MAX_REQUESTS: int = 100
+    ENABLE_IP_BLOCKING: bool = True
+    MAX_FAILED_ATTEMPTS: int = 5
+    IP_BLOCK_DURATION: int = 3600  # 1 hour
 
     @validator("SECRET_KEY")
     def validate_secret_key(cls, v):
+        if not v:
+            raise ValueError("SECRET_KEY must be set in environment variables")
         if len(v) < 32:
             raise ValueError("Secret key must be at least 32 characters long")
+        return v
+
+    @validator("MAX_REQUEST_SIZE")
+    def validate_max_request_size(cls, v):
+        if v < 1024:  # Minimum 1KB
+            raise ValueError("Maximum request size must be at least 1KB")
+        if v > 10485760:  # Maximum 10MB
+            raise ValueError("Maximum request size must not exceed 10MB")
+        return v
+
+    @validator("MAX_CONNECTIONS_PER_IP")
+    def validate_max_connections_per_ip(cls, v):
+        if v < 1:
+            raise ValueError("Maximum connections per IP must be at least 1")
+        return v
+
+    @validator("MAX_CONNECTIONS_PER_USER")
+    def validate_max_connections_per_user(cls, v):
+        if v < 1:
+            raise ValueError("Maximum connections per user must be at least 1")
+        return v
+
+    @validator("RATE_LIMIT_WINDOW")
+    def validate_rate_limit_window(cls, v):
+        if v < 1:
+            raise ValueError("Rate limit window must be at least 1 second")
+        return v
+
+    @validator("RATE_LIMIT_MAX_REQUESTS")
+    def validate_rate_limit_max_requests(cls, v):
+        if v < 1:
+            raise ValueError("Rate limit max requests must be at least 1")
+        return v
+
+    @validator("MAX_FAILED_ATTEMPTS")
+    def validate_max_failed_attempts(cls, v):
+        if v < 1:
+            raise ValueError("Maximum failed attempts must be at least 1")
+        return v
+
+    @validator("IP_BLOCK_DURATION")
+    def validate_ip_block_duration(cls, v):
+        if v < 300:  # Minimum 5 minutes
+            raise ValueError("IP block duration must be at least 5 minutes")
         return v
 
 class CORSSettings(BaseSettings):
